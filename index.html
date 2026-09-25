@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSE Studio — JS 子集解析 · AST 变换 · 代码生成</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>JSE Studio</h1>
+    <span class="sub">JS 子集解析器 · AST 变换 · 代码生成（Web Worker + Canvas + IndexedDB）</span>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-title">源代码（JS 子集）</div>
+      <textarea id="src" spellcheck="false" placeholder="在此输入 JS 子集代码…"></textarea>
+      <div class="toolbar">
+        <label><input type="checkbox" id="opt-fold" checked> 常量折叠</label>
+        <label><input type="checkbox" id="opt-dead" checked> 死代码消除</label>
+        <label><input type="checkbox" id="opt-rename"> 变量重命名</label>
+      </div>
+      <div class="toolbar">
+        <button id="btn-run" class="primary">解析 · 变换 · 生成</button>
+        <button id="btn-bench">性能测试</button>
+      </div>
+      <div class="toolbar">
+        <input id="snippet-name" type="text" placeholder="代码片段名称">
+        <button id="btn-save">保存到 IndexedDB</button>
+      </div>
+      <div id="snippet-list" class="snippet-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">AST 可视化（Canvas · 拖拽平移 / 滚轮缩放）</div>
+      <canvas id="ast-canvas"></canvas>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">异常提示</div>
+      <div id="errors" class="errors hidden"></div>
+      <div class="panel-title">生成代码</div>
+      <pre id="output"></pre>
+      <div class="panel-title">性能</div>
+      <div id="stats" class="stats"></div>
+    </section>
+  </main>
+
+  <script src="src/lexer.js"></script>
+  <script src="src/parser.js"></script>
+  <script src="src/traverse.js"></script>
+  <script src="src/transform.js"></script>
+  <script src="src/generator.js"></script>
+  <script src="src/astview.js"></script>
+  <script src="src/db.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
