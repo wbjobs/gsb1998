@@ -1,0 +1,11 @@
+{
+  "name": "js-ast-studio",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "JS 子集解析器 / AST 变换 / 代码生成器（Web Worker + Canvas + IndexedDB）",
+  "scripts": {
+    "test": "node test/run.mjs",
+    "serve": "python3 -m http.server 8080"
+  }
+}

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JS 子集 AST 工作室</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      padding: 10px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 16px; margin: 0; }
+    .transforms label { margin-right: 10px; font-size: 13px; cursor: pointer; }
+    button {
+      background: #238636;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button:hover { background: #2ea043; }
+    button.secondary { background: #1f6feb; }
+    button.danger { background: #da3633; padding: 2px 8px; }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 8px;
+      padding: 8px;
+      min-height: 0;
+    }
+    .panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel h2 {
+      margin: 0;
+      padding: 6px 12px;
+      font-size: 13px;
+      background: #21262d;
+      border-bottom: 1px solid #30363d;
+    }
+    textarea {
+      flex: 1;
+      background: #0d1117;
+      color: #c9d1d9;
+      border: none;
+      padding: 10px;
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+      resize: none;
+      outline: none;
+    }
+    #output { color: #7ee787; }
+    #ast-canvas { flex: 1; width: 100%; }
+    #error {
+      display: none;
+      padding: 8px 16px;
+      background: #3d1d1f;
+      color: #ff7b72;
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+      border-top: 1px solid #da3633;
+    }
+    #error.visible { display: block; }
+    #stats {
+      padding: 6px 16px;
+      background: #161b22;
+      border-top: 1px solid #30363d;
+      font-size: 12px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    #stats b { color: #79c0ff; }
+    aside {
+      position: absolute;
+      right: 8px;
+      top: 56px;
+      width: 260px;
+      max-height: 40vh;
+      overflow: auto;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 12px;
+      opacity: 0.95;
+    }
+    aside h3 { margin: 4px 0; font-size: 12px; color: #8b949e; }
+    aside ul { list-style: none; margin: 0 0 8px; padding: 0; }
+    aside li { display: flex; gap: 4px; margin: 2px 0; word-break: break-all; }
+    aside li button { flex: 1; text-align: left; background: #21262d; }
+    #snippet-name {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      border-radius: 4px;
+      padding: 4px 8px;
+      width: 100%;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>JS 子集 AST 工作室</h1>
+    <div class="transforms">
+      <label><input type="checkbox" name="transform" value="foldConstants" checked> 常量折叠</label>
+      <label><input type="checkbox" name="transform" value="varToLet" checked> var→let</label>
+      <label><input type="checkbox" name="transform" value="eliminateDeadCode" checked> 死代码消除</label>
+    </div>
+    <button id="run">解析 · 变换 · 生成</button>
+    <button id="benchmark" class="secondary">性能基准</button>
+  </header>
+
+  <main>
+    <div class="panel">
+      <h2>源码输入</h2>
+      <textarea id="editor" spellcheck="false"></textarea>
+    </div>
+    <div class="panel">
+      <h2>生成代码</h2>
+      <textarea id="output" readonly spellcheck="false"></textarea>
+    </div>
+    <div class="panel">
+      <h2>AST 可视化（Canvas）</h2>
+      <canvas id="ast-canvas"></canvas>
+    </div>
+    <div class="panel">
+      <h2>说明</h2>
+      <textarea readonly spellcheck="false">支持的 JS 子集：
+· var / let / const 声明，函数声明与箭头函数
+· if / else、while、for、return、break、continue
+· 二元 / 一元 / 三元 / 赋值 / 更新表达式
+· 调用、成员访问、数组、对象字面量
+
+解析与变换在 Web Worker 中执行，不阻塞界面。
+片段与运行历史保存在 IndexedDB（右侧面板）。
+语法错误会提示具体行列并定位光标。</textarea>
+    </div>
+  </main>
+
+  <div id="error"></div>
+  <div id="stats"></div>
+
+  <aside>
+    <h3>保存片段（IndexedDB）</h3>
+    <input id="snippet-name" placeholder="片段名称">
+    <button id="save">保存当前代码</button>
+    <ul id="snippet-list"></ul>
+    <h3>运行历史</h3>
+    <ul id="history-list"></ul>
+  </aside>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
